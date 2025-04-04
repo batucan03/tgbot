@@ -1,7 +1,7 @@
 # main.py
 from telegram.ext import Updater
 from database import init_db
-from telegram.bot import start_bot
+from bot import start_bot
 from scheduler import start_scheduler
 import threading
 

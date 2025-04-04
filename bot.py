@@ -1,7 +1,7 @@
 # telegram/bot.py
 from telegram.ext import Updater
 from config import TOKEN
-from telegram.commands import register_commands
+from commands import register_commands
 from telegram.buttons import register_buttons
 from telegram.messages import register_messages
 from telegram.admin import register_admin_buttons

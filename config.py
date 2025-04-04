@@ -1,13 +1,15 @@
 # config.py
+import os  # os modülünü içe aktar (ortam değişkenlerini okumak için)
 
 # Ortam değişkenlerinden API anahtarlarını oku
 TOKEN = os.getenv("TELEGRAM_TOKEN", "your-telegram-bot-token")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "your-openai-api-key")
 UNSPLASH_API_KEY = os.getenv("UNSPLASH_API_KEY", "your-unsplash-api-key")
 
-
+# OpenAI API
 OPENAI_MODEL = "gpt-4o-mini"
 
+# Unsplash API
 UNSPLASH_API_URL = "https://api.unsplash.com/search/photos"
 
 # Admin
@@ -19,10 +21,10 @@ DEFAULT_RSS_URL = "https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml"
 
 # Limits
 MAX_CHANNELS = 20
-MAX_PROMPT_LENGTH = 150
+MAX_PROMPT_LENGTH = 100
 
 # Image Settings
-IMAGE_SIZE = (2560, 1440)
+IMAGE_SIZE = (1280, 720)
 
 # Scheduler
 SCHEDULE_INTERVAL_MINUTES = 60  # Paylaşım sıklığı (dakika cinsinden)

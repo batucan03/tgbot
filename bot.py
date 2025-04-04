@@ -6,7 +6,9 @@ from buttons import register_buttons
 from messages import register_messages
 from admin import register_admin_buttons
 
-def start_bot():
+from commands import register_commands  # Komutları kaydetmek için
+
+def start_bot(dispatcher): 
     updater = Updater(TOKEN, use_context=True)
     dp = updater.dispatcher
     register_commands(dp)

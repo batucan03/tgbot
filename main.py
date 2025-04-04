@@ -2,14 +2,15 @@
 from database import init_db
 from scheduler import start_scheduler
 from bot import start_bot
-from config import TOKEN  # TOKEN'ı config.py'dan içe aktar
+from config import TOKEN
+from telegram.ext import Updater  # Updater sınıfını içe aktar
 
 def main():
     # Veritabanını başlat
     init_db()
 
     # Botu başlat
-    updater = Updater(TOKEN, use_context=True)  # Hardcoded token yerine TOKEN kullan
+    updater = Updater(TOKEN, use_context=True)
     dispatcher = updater.dispatcher
 
     # Komutları ve zamanlayıcıyı başlat

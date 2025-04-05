@@ -2,12 +2,9 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import CallbackQueryHandler, CallbackContext
 from config import (
-    SELECT_MODE_MESSAGE, RSS_MODE_MESSAGE, ADD_SOURCE_MESSAGE, SET_TEMPLATE_MESSAGE,
-    TEMPLATE_1_MESSAGE, TEMPLATE_2_MESSAGE, AI_MODE_MESSAGE, SINGLE_PROMPT_MESSAGE,
-    CONCEPT_MODE_MESSAGE, NO_PROMPTS_MESSAGE, SETTINGS_MESSAGE, APPROVAL_TOGGLED_MESSAGE,
-    IMAGES_TOGGLED_MESSAGE, APPROVE_MESSAGE, APPROVED_MESSAGE, REJECTED_MESSAGE,
-    NO_PENDING_MESSAGE, STATS_MESSAGE, HELP_MESSAGE, HELP_MODES_MESSAGE,
-    HELP_APPROVAL_MESSAGE, HELP_IMAGES_MESSAGE, HELP_COMMANDS_MESSAGE, BALANCE_MESSAGE
+    BALANCE_MESSAGE, STATS_MESSAGE, HELP_MESSAGE, HELP_MODES_MESSAGE,
+    HELP_APPROVAL_MESSAGE, HELP_IMAGES_MESSAGE, HELP_COMMANDS_MESSAGE,
+    NO_PENDING_MESSAGE, APPROVED_MESSAGE, REJECTED_MESSAGE
 )
 from database import get_balance, get_prompts, update_settings, get_stats
 from image import fetch_image
@@ -31,151 +28,97 @@ def button_handler(update: Update, context: CallbackContext):
         reply_markup = InlineKeyboardMarkup(keyboard)
         query.message.reply_text(BALANCE_MESSAGE.format(balance=balance), reply_markup=reply_markup)
 
-    elif data == "select_mode":
+    elif data == "add_channel":
+        context.user_data['state'] = 'add_channel'
+        keyboard = [[InlineKeyboardButton("İptal", callback_data="back")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        query.message.reply_text("Lütfen kanal ID'sini girin (örneğin: @KanalAdi veya -100123456789):", reply_markup=reply_markup)
+
+    elif data.startswith("set_channel_"):
+        channel_id = data.split("_")[2]
+        context.user_data['current_channel'] = channel_id
         keyboard = [
-            [InlineKeyboardButton("RSS ile İçerik Çekme", callback_data="rss_mode")],
-            [InlineKeyboardButton("Yapay Zeka ile İçerik Üretme", callback_data="ai_mode")],
+            [InlineKeyboardButton("Kaynak Ekle (RSS)", callback_data=f"source_{channel_id}")],
+            [InlineKeyboardButton("Paylaşım Sıklığı", callback_data=f"frequency_{channel_id}")],
+            [InlineKeyboardButton("Paylaşım Türü", callback_data=f"type_{channel_id}")],
             [InlineKeyboardButton("Geri", callback_data="back")],
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        query.message.reply_text(SELECT_MODE_MESSAGE, reply_markup=reply_markup)
+        query.edit_message_text(f"{channel_id} için ayarları yapın:", reply_markup=reply_markup)
 
-    elif data == "rss_mode":
-        context.user_data['state'] = 'rss_mode'
+    elif data.startswith("source_"):
+        channel_id = data.split("_")[1]
+        context.user_data['state'] = 'set_source'
+        keyboard = [[InlineKeyboardButton("İptal", callback_data=f"set_channel_{channel_id}")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        query.edit_message_text("Lütfen RSS kaynak URL'sini girin:", reply_markup=reply_markup)
+
+    elif data.startswith("frequency_"):
+        channel_id = data.split("_")[1]
         keyboard = [
-            [InlineKeyboardButton("Kaynak Ekle", callback_data="add_source")],
-            [InlineKeyboardButton("Şablon Seç", callback_data="set_template")],
-            [InlineKeyboardButton("Geri", callback_data="select_mode")],
+            [InlineKeyboardButton("Her Saat", callback_data=f"freq_{channel_id}_hourly")],
+            [InlineKeyboardButton("Günlük", callback_data=f"freq_{channel_id}_daily")],
+            [InlineKeyboardButton("Haftalık", callback_data=f"freq_{channel_id}_weekly")],
+            [InlineKeyboardButton("Geri", callback_data=f"set_channel_{channel_id}")],
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        query.message.reply_text(RSS_MODE_MESSAGE, reply_markup=reply_markup)
+        query.edit_message_text("Paylaşım sıklığını seçin:", reply_markup=reply_markup)
 
-    elif data == "add_source":
-        context.user_data['state'] = 'add_source'
-        keyboard = [[InlineKeyboardButton("İptal", callback_data="rss_mode")]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        query.message.reply_text(ADD_SOURCE_MESSAGE, reply_markup=reply_markup)
-
-    elif data == "set_template":
+    elif data.startswith("type_"):
+        channel_id = data.split("_")[1]
         keyboard = [
-            [InlineKeyboardButton("Başlık + Özet + Kaynak", callback_data="template_1")],
-            [InlineKeyboardButton("Başlık + 100 Karakter Özet", callback_data="template_2")],
-            [InlineKeyboardButton("Geri", callback_data="rss_mode")],
+            [InlineKeyboardButton("Metin", callback_data=f"type_{channel_id}_text")],
+            [InlineKeyboardButton("Medya", callback_data=f"type_{channel_id}_media")],
+            [InlineKeyboardButton("Geri", callback_data=f"set_channel_{channel_id}")],
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        query.message.reply_text(SET_TEMPLATE_MESSAGE, reply_markup=reply_markup)
+        query.edit_message_text("Paylaşım türünü seçin:", reply_markup=reply_markup)
 
-    elif data == "template_1":
-        settings = context.bot_data['user_settings'][user_id]
-        settings['template'] = '{title}\n{summary}\nKaynak: {link}'
-        update_settings(user_id, settings)
-        keyboard = [[InlineKeyboardButton("Geri", callback_data="rss_mode")]]
+    elif data.startswith("freq_"):
+        channel_id, freq = data.split("_")[1], data.split("_")[2]
+        if 'channels' not in context.bot_data:
+            context.bot_data['channels'] = {}
+        if channel_id not in context.bot_data['channels']:
+            context.bot_data['channels'][channel_id] = {}
+        context.bot_data['channels'][channel_id]['frequency'] = freq
+        keyboard = [[InlineKeyboardButton("Geri", callback_data=f"set_channel_{channel_id}")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        query.message.reply_text(TEMPLATE_1_MESSAGE, reply_markup=reply_markup)
+        query.edit_message_text(f"{channel_id} için sıklık '{freq}' olarak ayarlandı.", reply_markup=reply_markup)
 
-    elif data == "template_2":
-        settings = context.bot_data['user_settings'][user_id]
-        settings['template'] = '{title}\n{summary}'
-        update_settings(user_id, settings)
-        keyboard = [[InlineKeyboardButton("Geri", callback_data="rss_mode")]]
+    elif data.startswith("type_"):
+        channel_id, share_type = data.split("_")[1], data.split("_")[2]
+        if 'channels' not in context.bot_data:
+            context.bot_data['channels'] = {}
+        if channel_id not in context.bot_data['channels']:
+            context.bot_data['channels'][channel_id] = {}
+        context.bot_data['channels'][channel_id]['type'] = share_type
+        keyboard = [[InlineKeyboardButton("Geri", callback_data=f"set_channel_{channel_id}")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        query.message.reply_text(TEMPLATE_2_MESSAGE, reply_markup=reply_markup)
+        query.edit_message_text(f"{channel_id} için paylaşım türü '{share_type}' olarak ayarlandı.", reply_markup=reply_markup)
 
-    elif data == "ai_mode":
-        context.user_data['state'] = 'ai_mode'
-        keyboard = [
-            [InlineKeyboardButton("Tek Seferlik Prompt", callback_data="single_prompt")],
-            [InlineKeyboardButton("Kanal Konsepti Modu", callback_data="concept_mode")],
-            [InlineKeyboardButton("Prompt’larımı Gör", callback_data="list_prompts")],
-            [InlineKeyboardButton("Geri", callback_data="select_mode")],
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        query.message.reply_text(AI_MODE_MESSAGE, reply_markup=reply_markup)
-
-    elif data == "single_prompt":
-        context.user_data['state'] = 'single_prompt'
-        keyboard = [[InlineKeyboardButton("İptal", callback_data="ai_mode")]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        query.message.reply_text(SINGLE_PROMPT_MESSAGE, reply_markup=reply_markup)
-
-    elif data == "concept_mode":
-        context.user_data['state'] = 'set_concept'
-        keyboard = [[InlineKeyboardButton("İptal", callback_data="ai_mode")]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        query.message.reply_text(CONCEPT_MODE_MESSAGE, reply_markup=reply_markup)
-
-    elif data == "list_prompts":
-        prompts = get_prompts(user_id)
-        if not prompts:
-            text = NO_PROMPTS_MESSAGE
+    elif data == "list_channels":
+        channels = context.bot_data.get('channels', {})
+        if not channels:
+            text = "Henüz eklenmiş kanal yok."
         else:
-            text = "Yazdığınız prompt’lar:\n" + "\n".join([f"{i+1}. {prompt}" for i, prompt in enumerate(prompts)])
-        keyboard = [[InlineKeyboardButton("Geri", callback_data="ai_mode")]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        query.message.reply_text(text, reply_markup=reply_markup)
-
-    elif data == "settings":
-        settings = context.bot_data['user_settings'][user_id]
-        approval = "Açık" if settings['approval'] else "Kapalı"
-        images = "Açık" if settings['images'] else "Kapalı"
-        text = SETTINGS_MESSAGE.format(approval=approval, images=images)
+            text = "Ekli Kanallar:\n"
+            for channel_id, settings in channels.items():
+                source = settings.get('source', 'Belirtilmemiş')
+                freq = settings.get('frequency', 'Belirtilmemiş')
+                share_type = settings.get('type', 'Belirtilmemiş')
+                text += f"{channel_id}:\n  Kaynak: {source}\n  Sıklık: {freq}\n  Tür: {share_type}\n"
         keyboard = [
-            [InlineKeyboardButton("Onay Özelliğini Aç/Kapat", callback_data="toggle_approval")],
-            [InlineKeyboardButton("Görsel Ekleme Aç/Kapat", callback_data="toggle_images")],
+            [InlineKeyboardButton("Kanal Düzenle", callback_data="edit_channel")],
             [InlineKeyboardButton("Geri", callback_data="back")],
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        query.message.reply_text(text, reply_markup=reply_markup)
+        query.edit_message_text(text, reply_markup=reply_markup)
 
-    elif data == "toggle_approval":
-        settings = context.bot_data['user_settings'][user_id]
-        settings['approval'] = not settings['approval']
-        update_settings(user_id, settings)
-        status = "Açık" if settings['approval'] else "Kapalı"
-        text = APPROVAL_TOGGLED_MESSAGE.format(status=status)
-        keyboard = [[InlineKeyboardButton("Geri", callback_data="settings")]]
+    elif data == "edit_channel":
+        context.user_data['state'] = 'edit_channel'
+        keyboard = [[InlineKeyboardButton("İptal", callback_data="list_channels")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        query.message.reply_text(text, reply_markup=reply_markup)
-
-    elif data == "toggle_images":
-        settings = context.bot_data['user_settings'][user_id]
-        settings['images'] = not settings['images']
-        update_settings(user_id, settings)
-        status = "Açık" if settings['images'] else "Kapalı"
-        text = IMAGES_TOGGLED_MESSAGE.format(status=status)
-        keyboard = [[InlineKeyboardButton("Geri", callback_data="settings")]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        query.message.reply_text(text, reply_markup=reply_markup)
-
-    elif data.startswith("approve_"):
-        post_id = int(data.split("_")[1])
-        if post_id in context.bot_data.get('pending_posts', {}):
-            post = context.bot_data['pending_posts'].pop(post_id)
-            user_id = post['user_id']
-            channel_id = post['channel_id']
-            content = post['content']
-            settings = context.bot_data['user_settings'][user_id]
-            if settings['images']:
-                image_path = fetch_image("news" if settings['template'] else settings['concept'])
-                if image_path:
-                    with open(image_path, 'rb') as photo:
-                        context.bot.send_photo(chat_id=channel_id, photo=photo, caption=content)
-                    os.remove(image_path)
-                else:
-                    context.bot.send_message(chat_id=channel_id, text=content)
-            else:
-                context.bot.send_message(chat_id=channel_id, text=content)
-            query.message.reply_text(APPROVED_MESSAGE)
-        else:
-            query.message.reply_text("Bu paylaşım artık geçerli değil.")
-
-    elif data.startswith("reject_"):
-        post_id = int(data.split("_")[1])
-        if post_id in context.bot_data.get('pending_posts', {}):
-            context.bot_data['pending_posts'].pop(post_id)
-            query.message.reply_text(REJECTED_MESSAGE)
-        else:
-            query.message.reply_text("Bu paylaşım artık geçerli değil.")
+        query.edit_message_text("Düzenlemek istediğiniz kanalın ID'sini girin:", reply_markup=reply_markup)
 
     elif data == "list_pending":
         user_posts = {k: v for k, v in context.bot_data.get('pending_posts', {}).items() if v['user_id'] == user_id}
@@ -231,14 +174,44 @@ def button_handler(update: Update, context: CallbackContext):
     elif data == "back":
         keyboard = [
             [InlineKeyboardButton("Kodu Aktif Et", callback_data="activate_code")],
-            [InlineKeyboardButton("Paylaşım Türünü Seç", callback_data="select_mode")],
-            [InlineKeyboardButton("Ayarlar", callback_data="settings")],
+            [InlineKeyboardButton("Kanal Ekle", callback_data="add_channel")],
+            [InlineKeyboardButton("Ekli Kanallar", callback_data="list_channels")],
             [InlineKeyboardButton("Bakiyemi Kontrol Et", callback_data="check_balance")],
             [InlineKeyboardButton("İstatistikler", callback_data="stats")],
             [InlineKeyboardButton("Kullanım Kılavuzu", callback_data="help")],
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         query.message.reply_text("Ana menüye döndünüz:", reply_markup=reply_markup)
+
+    elif data.startswith("approve_"):
+        post_id = int(data.split("_")[1])
+        if post_id in context.bot_data.get('pending_posts', {}):
+            post = context.bot_data['pending_posts'].pop(post_id)
+            user_id = post['user_id']
+            channel_id = post['channel_id']
+            content = post['content']
+            settings = context.bot_data['channels'].get(channel_id, {})
+            if settings.get('type') == 'media':
+                image_path = fetch_image("news")
+                if image_path:
+                    with open(image_path, 'rb') as photo:
+                        context.bot.send_photo(chat_id=channel_id, photo=photo, caption=content)
+                    os.remove(image_path)
+                else:
+                    context.bot.send_message(chat_id=channel_id, text=content)
+            else:
+                context.bot.send_message(chat_id=channel_id, text=content)
+            query.message.reply_text(APPROVED_MESSAGE)
+        else:
+            query.message.reply_text("Bu paylaşım artık geçerli değil.")
+
+    elif data.startswith("reject_"):
+        post_id = int(data.split("_")[1])
+        if post_id in context.bot_data.get('pending_posts', {}):
+            context.bot_data['pending_posts'].pop(post_id)
+            query.message.reply_text(REJECTED_MESSAGE)
+        else:
+            query.message.reply_text("Bu paylaşım artık geçerli değil.")
 
 def register_buttons(dp):
     dp.add_handler(CallbackQueryHandler(button_handler))

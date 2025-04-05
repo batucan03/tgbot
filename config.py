@@ -6,6 +6,9 @@ TOKEN = os.getenv("TELEGRAM_TOKEN", "your-telegram-bot-token")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "your-openai-api-key")
 UNSPLASH_API_KEY = os.getenv("UNSPLASH_API_KEY", "your-unsplash-api-key")
 
+# Veritabanı yolu
+DB_PATH = "tgbot.db"
+
 # OpenAI API
 OPENAI_MODEL = "gpt-4o-mini"
 
@@ -27,7 +30,7 @@ MAX_PROMPT_LENGTH = 100
 IMAGE_SIZE = (1280, 720)
 
 # Scheduler
-SCHEDULE_INTERVAL_MINUTES = 60  # Paylaşım sıklığı (dakika cinsinden)
+SCHEDULE_INTERVAL_MINUTES = 60  # Varsayılan paylaşım sıklığı (dakika cinsinden), artık kullanılmayabilir
 
 # Messages
 WELCOME_MESSAGE = "Merhaba! Haber botuna hoş geldin. Aşağıdaki butonlarla botu kullanabilirsin."
@@ -61,3 +64,10 @@ HELP_COMMANDS_MESSAGE = "Komutlar ve İpuçları:\n- /start: Botu başlatır.\n-
 NO_CHANNEL_MESSAGE = "Önce bir kanal ekleyin!"
 POST_SENT_MESSAGE = "Paylaşım kanala gönderildi!"
 BALANCE_EXPIRED_MESSAGE = "Bakiyeniz bitti, yeni bir kod alın!"
+
+# Yeni Eklenen Mesajlar
+CHANNEL_ADDED_MESSAGE = "{channel_id} eklendi. Ayarları yapabilirsiniz:"
+SOURCE_SET_MESSAGE = "{channel_id} için kaynak '{source}' olarak ayarlandı."
+FREQUENCY_SET_MESSAGE = "{channel_id} için sıklık '{frequency}' olarak ayarlandı."
+TYPE_SET_MESSAGE = "{channel_id} için paylaşım türü '{type}' olarak ayarlandı."
+NO_CHANNELS_MESSAGE = "Henüz eklenmiş kanal yok."

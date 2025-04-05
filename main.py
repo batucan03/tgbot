@@ -1,9 +1,12 @@
-from telegram import Update
+# main.py
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, Filters, CallbackContext
 from buttons import register_buttons
 from admin import register_admin_buttons
 from database import init_db, get_channels, add_channel
+from scheduler import start_scheduler
 import config
+import threading
 
 def start(update: Update, context: CallbackContext):
     keyboard = [
@@ -63,12 +66,16 @@ def handle_message(update: Update, context: CallbackContext):
 
 def main():
     init_db()  # Veritabanını başlat
-    app = Application.builder().token(config.BOT_TOKEN).build()
+    app = Application.builder().token(config.TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
     register_buttons(app)
     register_admin_buttons(app)
+
+    # Scheduler'ı ayrı bir iş parçacığında başlat
+    scheduler_thread = threading.Thread(target=start_scheduler, args=(app.context,))
+    scheduler_thread.start()
 
     app.run_polling()
 
